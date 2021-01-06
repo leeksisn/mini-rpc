@@ -1,1 +1,5 @@
 mini-rpc/.idea/
+mini-rpc/target/
+rpc-api/target/
+rpc-consumer/target/
+rpc-provider/target/
