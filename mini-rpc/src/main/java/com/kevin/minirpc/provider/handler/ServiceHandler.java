@@ -26,29 +26,34 @@ public class ServiceHandler extends ChannelInboundHandlerAdapter {
             // 3.根据RpcRequest寻找对应的接口和方法
             Class<?> aClass = Thread.currentThread().getContextClassLoader().loadClass(rpcRequest.getClassName());
             if (aClass == null) {
-                writeAndFlushResponse(ctx, "not support class:" + rpcRequest.getClassName());
+                writeAndFlushResponse(ctx, rpcRequest.getRequestId(), "not support class:" + rpcRequest.getClassName());
                 return;
             }
 
             Object bean = SpringContextHolder.getBean(aClass);
             if (bean == null) {
-                writeAndFlushResponse(ctx, "not support class:" + rpcRequest.getClassName());
+                writeAndFlushResponse(ctx, rpcRequest.getRequestId(), "not support class:" + rpcRequest.getClassName());
                 return;
             }
             Method declaredMethod = bean.getClass().getDeclaredMethod(rpcRequest.getMethodName(), rpcRequest.getParameterTypes());
             if (declaredMethod == null) {
-                writeAndFlushResponse(ctx, "not support method:" + rpcRequest.getMethodName());
+                writeAndFlushResponse(ctx, rpcRequest.getRequestId(), "not support method:" + rpcRequest.getMethodName());
                 return;
             }
             // 4.并执行它
             Object invoke = declaredMethod.invoke(bean, rpcRequest.getParameters());
 
             // 5.把调用实现类的方法获得的结果写到客户端
-            writeAndFlushResponse(ctx, invoke);
+            writeAndFlushResponse(ctx, rpcRequest.getRequestId(), invoke);
         } else {
             System.out.println("请求了数据：" + msg.toString());
-            writeAndFlushResponse(ctx, "fail");
+            writeAndFlushResponse(ctx, null, "fail");
         }
+    }
+
+    private void writeAndFlushResponse(ChannelHandlerContext ctx, String requestId, Object msg) {
+        RpcReponse rpcReponse = new RpcReponse(requestId, msg);
+        ctx.writeAndFlush(rpcReponse);
     }
 
     @Override
@@ -60,8 +65,4 @@ public class ServiceHandler extends ChannelInboundHandlerAdapter {
         super.exceptionCaught(ctx, cause);
     }
 
-    private void writeAndFlushResponse(ChannelHandlerContext ctx, Object msg) {
-        RpcReponse rpcReponse = new RpcReponse(null, msg);
-        ctx.writeAndFlush(rpcReponse);
-    }
 }
